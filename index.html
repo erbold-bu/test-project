@@ -1,0 +1,204 @@
+<html>
+<style>
+    body {
+        background: #ecf0f1;
+    }
+
+    .post-control {
+        width: 500px;
+        margin: auto;
+    }
+
+    .left {
+        float: left;
+    }
+
+    .right {
+        float: right;
+    }
+
+    .post-body {
+        width: 480px;
+        background: white;
+        padding: 10px;
+        border-radius: 10px;
+        margin: auto;
+        margin-bottom: 15px;
+    }
+
+    .btn {
+        margin: 0;
+        padding: 10px;
+        font-weight: bold;
+        border: 0;
+        background-color: #bdc3c7;
+        border-radius: 3px;
+    }
+
+    .post-label {
+        min-width: 100px;
+    }
+
+    .post-label,
+    .post-content {
+        padding: 5px;
+    }
+
+    .container {
+        padding: 40px;
+    }
+
+    .form-input {
+        min-width: 350px;
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
+<script>
+    var defaults = {
+        endPoint: {
+            main: "https://test-4092e.firebaseio.com/",
+            post: "posts"
+        }
+    }
+</script>
+
+<body>
+    <div id="app" class="container">
+        <div class="post-body" v-for="(post, index) in posts.data">
+            <table>
+                <tr>
+                    <td class="post-label">
+                        <label>
+                            <b>Name</b>
+                        </label>
+                    </td>
+                    <td class="post-content">
+                        <span v-if="updateIndex !== index">{{post.name}}</span>
+                        <input class="form-input" type="text" v-model="editPost.name" v-if="updateIndex  === index">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="post-label">
+                        <label>
+                            <b>Email</b>
+                        </label>
+                    </td>
+                    <td class="post-content">
+                        <span v-if="updateIndex !== index">{{post.email}}</span>
+
+                        <input class="form-input" type="email" v-model="editPost.email" v-if="updateIndex  === index">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="post-label">
+                        <label>
+                            <b>Body</b>
+                        </label>
+                    </td>
+                    <td class="post-content">
+                        <span v-if="updateIndex !== index">{{post.body}}</span>
+                        <textarea class="form-input" v-model="editPost.body" v-if="updateIndex  === index"></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="post-content" colspan="2">
+                        <button class="btn right" @click="edit(index)" v-if="updateIndex !== index">
+                            Edit
+                        </button>
+                        <button class="btn right" @click="update(index)" v-if="updateIndex  === index">
+                            Save
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="post-control">
+            <button class="btn left" @click="previousPage()" :disabled="posts.paging.current == 0">
+                Previous
+            </button>
+            <button class="btn right" @click="nextPage()" :disabled="posts.paging.current == posts.paging.totalPage">
+                Next
+            </button>
+        </div>
+    </div>
+</body>
+
+<script>
+    var app = new Vue({
+        el: "#app",
+        data: {
+            postsCache: [],
+            posts: {
+                data: [],
+                paging: {
+                    max: 4,
+                    current: 0,
+                    totalPage: 0
+                }
+            },
+            updateIndex: -1,
+            editPost:{}
+        },
+        created: function () {
+            this.read();
+        },
+        methods: {
+            read() {
+                axios.get(defaults.endPoint.main + defaults.endPoint.post + ".json")
+                    .then(response => {
+                        app.postsCache = response.data.sort();
+                        app.posts.paging.totalPage = Math.ceil(app.postsCache.length / app.posts.paging.max);
+                        app.page();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    })
+            },
+            update(index) {
+                axios.put(defaults.endPoint.main + defaults.endPoint.post + "/" + app.editPost.id +
+                        ".json", app.editPost)
+                    .then(response => {
+                        app.posts.data[index] = Object.assign({}, app.editPost);
+                        this.updateIndex = -1;
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    })
+            },
+            page() {
+                let startIndex = (this.posts.paging.current == 0 ? 1 : this.posts.paging.max * this.posts.paging.current) - 1;
+                let endIndex = (this.posts.paging.totalPage == this.posts.paging.current ? this.postsCache.length - 1 : 
+                            (this.posts.paging.max + startIndex + -1));
+
+                this.posts.data = [];
+                for (; startIndex <= endIndex; startIndex++) {
+                    this.posts.data.push(this.postsCache[startIndex]);
+                }
+            },
+            nextPage() {
+                this.updateIndex = -1;
+
+                if (this.posts.paging.current < this.posts.paging.totalPage) {
+                    this.posts.paging.current++;
+                    this.page();
+                }
+            },
+            previousPage() {
+                this.updateIndex = -1;
+
+                if (this.posts.paging.current > 0) {
+                    this.posts.paging.current--;
+                    this.page();
+                }
+            },
+            edit(index) {
+                this.editPost = Object.assign({}, this.postsCache[index]);
+                this.updateIndex = index;
+            }
+        }
+    })
+</script>
+
+</html>
