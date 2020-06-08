@@ -148,7 +148,7 @@
             read() {
                 axios.get(defaults.endPoint.main + defaults.endPoint.post + ".json")
                     .then(response => {
-                        app.postsCache = response.data.sort();
+                        app.postsCache = response.data;
                         app.posts.paging.totalPage = Math.ceil(app.postsCache.length / app.posts.paging.max);
                         app.page();
                     })
